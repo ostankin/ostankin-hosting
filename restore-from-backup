@@ -1,0 +1,68 @@
+#!/bin/bash
+BACKUP_DIR=backup/latest
+DB_IMPORT_DIR=.db_import
+DATA_DIR=.data
+MYSQL_DUMP=$BACKUP_DIR/myx_db.sql.gz
+CMS_DUMP=$BACKUP_DIR/myx_files.tar.gz
+DB_DIR=$DATA_DIR/db
+CMS_DIR=$DATA_DIR/cms
+DB_SECRET=.env/db-secret
+CMS_SETTINGS=$CMS_DIR/sites/default/settings.php
+PWD_GEN_CMD='cat /dev/urandom | tr -dc A-Za-z0-9 | head -c${1:-32};echo;'
+
+#set -x
+
+function replace_field {
+  sudo sed -i -e 's/\('\'$2\''\s\+=>\s\+'\''\)[^'\'']*\('\''\)/\1'$3'\2/g' $1 
+}
+
+function generate_passwords {
+  MYSQL_ROOT_PASSWORD=$(eval $PWD_GEN_CMD)
+  MYSQL_USER_PASSWORD=$(eval $PWD_GEN_CMD)
+  echo "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD" > $DB_SECRET
+  echo "MYSQL_PASSWORD=$MYSQL_USER_PASSWORD" >> $DB_SECRET
+
+  sudo chmod u+w $CMS_SETTINGS
+  replace_field $CMS_SETTINGS database myx_ostankin
+  replace_field $CMS_SETTINGS username myx_ostankin
+  replace_field $CMS_SETTINGS password $MYSQL_USER_PASSWORD
+  replace_field $CMS_SETTINGS host db
+  sudo chmod a-w $CMS_SETTINGS
+}
+
+if [ ! -f $MYSQL_DUMP ] || [ ! -f $CMS_DUMP ]; then
+  echo "Both backup files must exist:"
+  echo $MYSQL_DUMP
+  echo $CMS_DUMP
+  echo Exiting.
+  exit 1
+fi
+
+echo "Restoring from backup will destroy current data. Type 'yes' to proceed."
+read CHOICE
+case "$CHOICE" in
+  "yes")
+    echo "Proceeding...";
+    ;;
+  *)
+    echo "Exiting."
+    exit
+    ;;
+esac
+
+echo Bringing down and destroying existing containers...
+sudo docker-compose down
+mkdir -p $DATA_DIR
+mkdir -p $DB_IMPORT_DIR
+cp $MYSQL_DUMP $DB_IMPORT_DIR
+gunzip $DB_IMPORT_DIR/*
+echo Deleting existing data...
+sudo rm -r $DB_DIR
+mkdir -p $CMS_DIR
+sudo rm -r $CMS_DIR/*
+sudo tar -xzpf $CMS_DUMP -C $CMS_DIR
+generate_passwords
+sudo docker-compose up -d
+echo Waiting for containers to start
+sleep 15
+rm -r $DB_IMPORT_DIR
