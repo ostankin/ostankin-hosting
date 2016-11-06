@@ -11,6 +11,18 @@ services:
        - "./.env/db"
        - "./.env/db-secret"
 
+   nginx:
+     depends_on:
+       - drupal
+     image: nginx:stable
+     volumes:
+       - "./nginx-conf:/etc/nginx/conf.d"
+     ports:
+       - "80:80"
+     links:
+       - drupal
+     restart: always
+    
    drupal:
      depends_on:
        - db
@@ -19,6 +31,4 @@ services:
        - "./.data/cms:/var/www/html"
      links:
        - db
-     ports:
-       - "80:80"
      restart: always
