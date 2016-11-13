@@ -33,7 +33,7 @@ services:
        - db
      image: drupal:7.51-apache
      volumes:
-       - "./.data/cms:/var/www/html"
+       - "./.data/cms/myx:/var/www/html"
      links:
        - db
      restart: always

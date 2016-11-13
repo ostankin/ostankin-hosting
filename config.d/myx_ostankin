@@ -1,0 +1,6 @@
+CMS_NAME=drupal
+CMS_FILES=myx
+BACKUP_NAME=myx
+DB_NAME=myx_ostankin
+USER_NAME=myx_ostankin
+TABLE_PREFIX=
