@@ -1,7 +1,7 @@
-# drupal-blog
-Scripts for managing my drupal blog.
+# ostankin-hosting
+Scripts for managing my hosting on ostankin.net.
 
-The blog is hosted on a Drupal + MySQL docker container pair. Both CMS and database are persistent and stored in `.data/cms` and `.data/db` directories respectively.
+The blog is hosted on a Drupal + MySQL docker container pair. Both CMS and database are persistent and stored in `.data/cms` and `.data/db` directories respectively. Hosting files are located in `.data/files`.
 
 ## Prerequisites
 
