@@ -7,7 +7,8 @@ The blog is hosted on a Drupal + MySQL docker container pair. Both CMS and datab
 
 The setup requires Docker and Docker Compose to work
 ```
-sudo apt-get install docker docker.io docker-compose
+sudo apt-get install docker docker.io python-pip
+pip install docker-compose
 ```
 
 ## Restoring from backup
