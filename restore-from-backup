@@ -55,7 +55,6 @@ sudo docker-compose down
 mkdir -p $DATA_DIR
 mkdir -p $DB_IMPORT_DIR
 cp $MYSQL_DUMP $DB_IMPORT_DIR
-gunzip $DB_IMPORT_DIR/*
 echo Deleting existing data...
 sudo rm -r $DB_DIR
 mkdir -p $CMS_DIR
