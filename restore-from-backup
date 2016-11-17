@@ -1,16 +1,9 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-DATA_DIR=$DIR/.data
-CONFIG_DIR=$DIR/config.d
-TEMPLATES_DIR=$DIR/templates
-CREATE_USER_TEMPLATE=$TEMPLATES_DIR/create-user.template
-CLEANUP_TEMPLATE=$TEMPLATES_DIR/cleanup.template
-BASE_BACKUP_DIR=$DIR/backup
-BACKUP_DIR=$BASE_BACKUP_DIR/latest
+source $DIR/common-functions
 DB_IMPORT_DIR=.db_import
 DATA_DIR=.data
 DB_DIR=$DATA_DIR/db
-CMS_BASE_DIR=$DATA_DIR/cms
 DB_HOST=db
 DB_SECRET=.env/db-secret
 PWD_GEN_CMD='cat /dev/urandom | tr -dc A-Za-z0-9 | head -c${1:-32};echo;'
@@ -55,17 +48,9 @@ function generate_user_password {
   USER_PASSWORD=$(eval $PWD_GEN_CMD)
 }
 
-function iterate_configs {
-  for f in $CONFIG_DIR/*; do
-    source $f
-    $1 $f
-  done
-}
-
 function check_backup {
   echo "Checking backup files for $1..."
-  MYSQL_DUMP=$BACKUP_DIR/$BACKUP_NAME"_db.sql.gz"
-  CMS_DUMP=$BACKUP_DIR/$BACKUP_NAME"_files.tar.gz"
+  load_dumps
   if [ ! -f $MYSQL_DUMP ] || [ ! -f $CMS_DUMP ]; then
     echo "At least one of the following backup files are missing:"
     echo $MYSQL_DUMP
@@ -83,12 +68,11 @@ function directory_is_empty {
 
 function restore_from_backup {
   echo "Restoring from $1..."
-  CMS_DIR=$CMS_BASE_DIR/$CMS_FILES
-  CMS_DUMP=$BACKUP_DIR/$BACKUP_NAME"_files.tar.gz"
+  CMS_DIR=$CMS_BASE_DIR/$BACKUP_NAME
+  load_dumps
   sudo mkdir -p $CMS_DIR
   sudo tar -xzpf $CMS_DUMP -C $CMS_DIR
   generate_user_password
-  MYSQL_DUMP=$BACKUP_DIR/$BACKUP_NAME"_db.sql.gz"
   cp $MYSQL_DUMP $DB_IMPORT_DIR/$($TIMESTAMP_CMD).sql.gz
   USER_SQL=$DB_IMPORT_DIR/$($TIMESTAMP_CMD).sql
   cp $CREATE_USER_TEMPLATE $USER_SQL
@@ -124,5 +108,5 @@ sudo rm -r ${DB_DIR?"Barmin prevented"}
 generate_root_password
 cp $CLEANUP_TEMPLATE $DB_IMPORT_DIR/$($TIMESTAMP_CMD).sh
 sudo docker-compose up -d
-echo "Waiting for MYSQL to initialize..."
+echo "Waiting for MySQL to initialize..."
 while ! directory_is_empty "$DB_IMPORT_DIR"; do sleep 1; done
