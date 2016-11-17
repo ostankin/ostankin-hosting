@@ -18,19 +18,32 @@ TIMESTAMP_CMD='date +%Y%j%H%M%S%N'
 
 #set -x
 
-function replace_field {
+function drupal_replace_field {
   sudo sed -i -e 's/\('\'$2\''\s\+=>\s\+'\''\)[^'\'']*\('\''\)/\1'$3'\2/g' $1
+}
+
+function modx_replace_field {
+  sudo sed -i -e 's/\('\$$2'\s\+=\s\+'\''\)[^'\'']*\('\''\)/\1'$3'\2/g' $1
 }
 
 function drupal_update_config {
   CMS_SETTINGS=$CMS_DIR/sites/default/settings.php
   sudo chmod u+w $CMS_SETTINGS
-  replace_field $CMS_SETTINGS database $DB_NAME
-  replace_field $CMS_SETTINGS username $USER_NAME
-  replace_field $CMS_SETTINGS password $USER_PASSWORD
-  replace_field $CMS_SETTINGS host $DB_HOST
-  replace_field $CMS_SETTINGS prefix $TABLE_PREFIX
+  drupal_replace_field $CMS_SETTINGS database $DB_NAME
+  drupal_replace_field $CMS_SETTINGS username $USER_NAME
+  drupal_replace_field $CMS_SETTINGS password $USER_PASSWORD
+  drupal_replace_field $CMS_SETTINGS host $DB_HOST
+  drupal_replace_field $CMS_SETTINGS prefix $TABLE_PREFIX
   sudo chmod a-w $CMS_SETTINGS
+}
+
+function modx_update_config {
+  CMS_SETTINGS=$CMS_DIR/manager/includes/config.inc.php
+  modx_replace_field $CMS_SETTINGS dbase $DB_NAME
+  modx_replace_field $CMS_SETTINGS database_user $USER_NAME
+  modx_replace_field $CMS_SETTINGS database_password $USER_PASSWORD
+  modx_replace_field $CMS_SETTINGS database_server $DB_HOST
+  modx_replace_field $CMS_SETTINGS table_prefix $TABLE_PREFIX
 }
 
 function generate_root_password {
@@ -43,7 +56,7 @@ function generate_user_password {
 }
 
 function iterate_configs {
-  for f in "$CONFIG_DIR/*"; do
+  for f in $CONFIG_DIR/*; do
     source $f
     $1 $f
   done
@@ -62,6 +75,10 @@ function check_backup {
   else
     echo Ok
   fi
+}
+
+function directory_is_empty {
+  [ ! "$(ls -A $1)" ]
 }
 
 function restore_from_backup {
@@ -101,9 +118,11 @@ sudo mkdir -p $CMS_BASE_DIR
 sudo rm -r ${CMS_BASE_DIR?"Barmin prevented"}/*
 mkdir -p $DB_IMPORT_DIR
 chmod a+w $DB_IMPORT_DIR
-rm $DB_IMPORT_DIR/*
+directory_is_empty "$DB_IMPORT_DIR" || rm $DB_IMPORT_DIR/*
 iterate_configs restore_from_backup
 sudo rm -r ${DB_DIR?"Barmin prevented"}
 generate_root_password
 cp $CLEANUP_TEMPLATE $DB_IMPORT_DIR/$($TIMESTAMP_CMD).sh
 sudo docker-compose up -d
+echo "Waiting for MYSQL to initialize..."
+while ! directory_is_empty "$DB_IMPORT_DIR"; do sleep 1; done

@@ -19,7 +19,6 @@ services:
        - "./nginx-conf:/etc/nginx/conf.d"
        - "./.data/files/root:/usr/share/nginx/root"
        - "./.data/files/pshortcut:/usr/share/nginx/pshortcut"
-       - "./.data/files/aqtest:/usr/share/nginx/aqtest"
        - "./.data/files/kuradiauk:/usr/share/nginx/kuradiauk"
        - "./.data/files/aboutbears:/usr/share/nginx/aboutbears"
      ports:
@@ -36,4 +35,14 @@ services:
        - "./.data/cms/myx:/var/www/html"
      links:
        - db
+     restart: always
+
+   modx:
+     depends_on:
+       - db
+     image: gerasim13/modx-docker
+     volumes:
+       - "./.data/cms/aqtest:/var/www/html"
+     links:
+       - db:mysql
      restart: always

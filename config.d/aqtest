@@ -1,0 +1,6 @@
+CMS_NAME=modx
+CMS_FILES=aqtest
+BACKUP_NAME=aqtest
+DB_NAME=aqtest
+USER_NAME=aqtest
+TABLE_PREFIX=modx_
