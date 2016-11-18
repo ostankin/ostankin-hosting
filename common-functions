@@ -2,10 +2,9 @@ DATA_DIR=$DIR/.data
 CONFIG_DIR=$DIR/config.d
 TEMPLATES_DIR=$DIR/templates
 CREATE_USER_TEMPLATE=$TEMPLATES_DIR/create-user.template
-CLEANUP_TEMPLATE=$TEMPLATES_DIR/cleanup.template
 BASE_BACKUP_DIR=$DIR/backup
-BACKUP_DIR=$BASE_BACKUP_DIR/latest
 CMS_BASE_DIR=$DATA_DIR/cms
+DB_SECRET=.env/db-secret
 
 function iterate_configs {
   for f in $CONFIG_DIR/*; do

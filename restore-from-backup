@@ -1,15 +1,13 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $DIR/common-functions
+BACKUP_DIR=$BASE_BACKUP_DIR/latest
 DB_IMPORT_DIR=.db_import
 DATA_DIR=.data
 DB_DIR=$DATA_DIR/db
 DB_HOST=db
-DB_SECRET=.env/db-secret
 PWD_GEN_CMD='cat /dev/urandom | tr -dc A-Za-z0-9 | head -c${1:-32};echo;'
 TIMESTAMP_CMD='date +%Y%j%H%M%S%N'
-
-#set -x
 
 function drupal_replace_field {
   sudo sed -i -e 's/\('\'$2\''\s\+=>\s\+'\''\)[^'\'']*\('\''\)/\1'$3'\2/g' $1
@@ -49,16 +47,17 @@ function generate_user_password {
 }
 
 function check_backup {
-  echo "Checking backup files for $1..."
+  echo -n "Checking backup files for $1 ... "
   load_dumps
   if [ ! -f $MYSQL_DUMP ] || [ ! -f $CMS_DUMP ]; then
+    echo
     echo "At least one of the following backup files are missing:"
     echo $MYSQL_DUMP
     echo $CMS_DUMP
     echo Exiting.
     exit 1
   else
-    echo Ok
+    echo ok
   fi
 }
 
@@ -66,20 +65,43 @@ function directory_is_empty {
   [ ! "$(ls -A $1)" ]
 }
 
-function restore_from_backup {
-  echo "Restoring from $1..."
+function restore_cms_files {
+  echo -n "Restoring CMS files from $1 ... "
   CMS_DIR=$CMS_BASE_DIR/$BACKUP_NAME
   load_dumps
   sudo mkdir -p $CMS_DIR
   sudo tar -xzpf $CMS_DUMP -C $CMS_DIR
   generate_user_password
-  cp $MYSQL_DUMP $DB_IMPORT_DIR/$($TIMESTAMP_CMD).sql.gz
   USER_SQL=$DB_IMPORT_DIR/$($TIMESTAMP_CMD).sql
   cp $CREATE_USER_TEMPLATE $USER_SQL
   sed -i 's/#DATABASE#/'$DB_NAME'/g' $USER_SQL
   sed -i 's/#USERNAME#/'$USER_NAME'/g' $USER_SQL
   sed -i 's/#PASSWORD#/'$USER_PASSWORD'/g' $USER_SQL
   $CMS_NAME"_update_config"
+  echo done
+}
+
+function load_mysql_container {
+  MYSQL_CONTAINER=$(sudo docker ps -q -f ancestor=mysql:5.7)
+}
+
+function invoke_mysql {
+  sudo docker exec -i $MYSQL_CONTAINER \
+    mysql -u root --password=$MYSQL_ROOT_PASSWORD $1 2> /dev/null
+}
+
+function mysql_is_up {
+  load_mysql_container
+  echo "do 0;" | invoke_mysql
+}
+
+function restore_database {
+  echo -n "Restoring database from $1 ... "
+  load_dumps
+  load_mysql_container
+  echo "create database $DB_NAME;" | invoke_mysql
+  zcat $MYSQL_DUMP | invoke_mysql $DB_NAME
+  echo done
 }
 
 iterate_configs check_backup
@@ -103,10 +125,11 @@ sudo rm -r ${CMS_BASE_DIR?"Barmin prevented"}/*
 mkdir -p $DB_IMPORT_DIR
 chmod a+w $DB_IMPORT_DIR
 directory_is_empty "$DB_IMPORT_DIR" || rm $DB_IMPORT_DIR/*
-iterate_configs restore_from_backup
+iterate_configs restore_cms_files
 sudo rm -r ${DB_DIR?"Barmin prevented"}
 generate_root_password
-cp $CLEANUP_TEMPLATE $DB_IMPORT_DIR/$($TIMESTAMP_CMD).sh
 sudo docker-compose up -d
-echo "Waiting for MySQL to initialize..."
-while ! directory_is_empty "$DB_IMPORT_DIR"; do sleep 1; done
+echo -n "Waiting for MySQL to start "
+while ! mysql_is_up; do sleep 1; echo -n "."; done
+echo " done"
+iterate_configs restore_database

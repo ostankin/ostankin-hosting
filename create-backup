@@ -1,0 +1,17 @@
+#!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source $DIR/common-functions
+BACKUP_DIR=$BASE_BACKUP_DIR/latest
+
+function create_backup {
+  CMS_DIR=$CMS_BASE_DIR/$BACKUP_NAME
+  load_dumps
+  tar -czpf $CMS_DUMP -C $CMS_DIR .
+  MYSQL_CONTAINER=$(sudo docker ps -q -f ancestor=mysql:5.7)
+  source $DB_SECRET
+  sudo docker exec $MYSQL_CONTAINER \
+    mysqldump -u root --password=$MYSQL_ROOT_PASSWORD $DB_NAME \
+    | gzip > $MYSQL_DUMP
+}
+
+iterate_configs create_backup
