@@ -4,7 +4,7 @@ TEMPLATES_DIR=$DIR/templates
 CREATE_USER_TEMPLATE=$TEMPLATES_DIR/create-user.template
 BASE_BACKUP_DIR=$DIR/backup
 CMS_BASE_DIR=$DATA_DIR/cms
-DB_SECRET=.env/db-secret
+DB_SECRET=.db-secret
 
 function iterate_configs {
   for f in $CONFIG_DIR/*; do

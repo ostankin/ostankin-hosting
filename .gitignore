@@ -1,4 +1,4 @@
 .db_import
 .data
 backup
-.env/db-secret
+.db-secret
