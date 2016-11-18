@@ -104,7 +104,7 @@ function restore_database {
   echo done
 }
 
-iterate_configs check_backup
+function confirmation_to_proceed {
 echo "Restoring from backup will destroy current data. Type 'yes' to proceed."
 read CHOICE
 case "$CHOICE" in
@@ -116,20 +116,27 @@ case "$CHOICE" in
     exit
     ;;
 esac
+}
 
-echo Bringing down and destroying existing containers...
-sudo docker-compose down
-sudo mkdir -p $DATA_DIR
-sudo mkdir -p $CMS_BASE_DIR
-sudo rm -r ${CMS_BASE_DIR?"Barmin prevented"}/*
-mkdir -p $DB_IMPORT_DIR
-chmod a+w $DB_IMPORT_DIR
-directory_is_empty "$DB_IMPORT_DIR" || rm $DB_IMPORT_DIR/*
-iterate_configs restore_cms_files
-sudo rm -r ${DB_DIR?"Barmin prevented"}
-generate_root_password
-sudo docker-compose up -d
-echo -n "Waiting for MySQL to start "
-while ! mysql_is_up; do sleep 1; echo -n "."; done
-echo " done"
+function restore_from_scratch {
+  iterate_configs check_backup
+  confirmation_to_proceed
+  echo Bringing down and destroying existing containers...
+  sudo docker-compose down
+  sudo mkdir -p $DATA_DIR
+  sudo mkdir -p $CMS_BASE_DIR
+  sudo rm -r ${CMS_BASE_DIR?"Barmin prevented"}/*
+  mkdir -p $DB_IMPORT_DIR
+  chmod a+w $DB_IMPORT_DIR
+  directory_is_empty "$DB_IMPORT_DIR" || rm $DB_IMPORT_DIR/*
+  iterate_configs restore_cms_files
+  sudo rm -r ${DB_DIR?"Barmin prevented"}
+  generate_root_password
+  sudo docker-compose up -d
+  echo -n "Waiting for MySQL to start "
+  while ! mysql_is_up; do sleep 1; echo -n "."; done
+  echo " done"
 iterate_configs restore_database
+}
+
+restore_from_scratch
