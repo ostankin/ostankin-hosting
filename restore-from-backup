@@ -9,6 +9,16 @@ DB_HOST=db
 PWD_GEN_CMD='cat /dev/urandom | tr -dc A-Za-z0-9 | head -c${1:-32};echo;'
 TIMESTAMP_CMD='date +%Y%j%H%M%S%N'
 
+OPTIND=1
+while getopts "a" opt; do
+  case "$opt" in
+  a)
+    COMPLETE_RESTORE=true
+    ;;
+  esac
+done
+shift $((OPTIND-1))
+
 function drupal_replace_field {
   sudo sed -i -e 's/\('\'$2\''\s\+=>\s\+'\''\)[^'\'']*\('\''\)/\1'$3'\2/g' $1
 }
@@ -65,9 +75,8 @@ function directory_is_empty {
   [ ! "$(ls -A $1)" ]
 }
 
-function restore_cms_files {
+function rebuild_cms_files {
   echo -n "Restoring CMS files from $1 ... "
-  CMS_DIR=$CMS_BASE_DIR/$BACKUP_NAME
   load_dumps
   sudo mkdir -p $CMS_DIR
   sudo tar -xzpf $CMS_DUMP -C $CMS_DIR
@@ -86,26 +95,25 @@ function load_mysql_container {
 }
 
 function invoke_mysql {
+  load_mysql_container
   sudo docker exec -i $MYSQL_CONTAINER \
     mysql -u root --password=$MYSQL_ROOT_PASSWORD $1 2> /dev/null
 }
 
 function mysql_is_up {
-  load_mysql_container
   echo "do 0;" | invoke_mysql
 }
 
-function restore_database {
+function rebuild_database {
   echo -n "Restoring database from $1 ... "
   load_dumps
-  load_mysql_container
   echo "create database $DB_NAME;" | invoke_mysql
   zcat $MYSQL_DUMP | invoke_mysql $DB_NAME
   echo done
 }
 
 function confirmation_to_proceed {
-echo "Restoring from backup will destroy current data. Type 'yes' to proceed."
+echo "$1 Type 'yes' to proceed."
 read CHOICE
 case "$CHOICE" in
   "yes")
@@ -118,10 +126,10 @@ case "$CHOICE" in
 esac
 }
 
-function restore_from_scratch {
+function rebuild_from_scratch {
   iterate_configs check_backup
-  confirmation_to_proceed
-  echo Bringing down and destroying existing containers...
+  confirmation_to_proceed \
+    "Complete rebuild from backup will destroy all existing sites."
   sudo docker-compose down
   sudo mkdir -p $DATA_DIR
   sudo mkdir -p $CMS_BASE_DIR
@@ -129,14 +137,37 @@ function restore_from_scratch {
   mkdir -p $DB_IMPORT_DIR
   chmod a+w $DB_IMPORT_DIR
   directory_is_empty "$DB_IMPORT_DIR" || rm $DB_IMPORT_DIR/*
-  iterate_configs restore_cms_files
-  sudo rm -r ${DB_DIR?"Barmin prevented"}
+  iterate_configs rebuild_cms_files
+  sudo rm -r $DB_DIR
   generate_root_password
   sudo docker-compose up -d
   echo -n "Waiting for MySQL to start "
   while ! mysql_is_up; do sleep 1; echo -n "."; done
   echo " done"
-iterate_configs restore_database
+  iterate_configs rebuild_database
 }
 
-restore_from_scratch
+function restore_single_site {
+  load_config $1
+  load_dumps  
+  check_backup $1
+  confirmation_to_proceed \
+    "Restoring '$1' from backup will destroy existing data in this site."
+  echo -n "Restoring CMS files ... "
+  sudo rm -r ${CMS_DIR?"Barmin prevented"}/*
+  sudo mkdir -p $CMS_DIR
+  sudo tar -xzpf $CMS_DUMP -C $CMS_DIR
+  echo done
+  echo -n "Restoring database ... "
+  source $DB_SECRET
+  zcat $MYSQL_DUMP | invoke_mysql $DB_NAME
+  echo done
+}
+
+if [ ! -z $COMPLETE_RESTORE ]; then
+  rebuild_from_scratch
+elif [ ! -z $1 ]; then
+  restore_single_site $1
+else
+  echo "Use -a to rebuild the whole hosting or provide a site to restore"
+fi
