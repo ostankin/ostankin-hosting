@@ -8,6 +8,7 @@ DB_DIR=$DATA_DIR/db
 DB_HOST=db
 PWD_GEN_CMD='cat /dev/urandom | tr -dc A-Za-z0-9 | head -c${1:-32};echo;'
 TIMESTAMP_CMD='date +%Y%j%H%M%S%N'
+TIMESTAMP_EXT='.timestamp'
 
 OPTIND=1
 while getopts "a" opt; do
@@ -79,6 +80,7 @@ function rebuild_cms_files {
   echo -n "Restoring CMS files from $1 ... "
   load_dumps
   sudo mkdir -p $CMS_DIR
+  sudo touch $CMS_DIR$TIMESTAMP_EXT
   sudo tar -xzpf $CMS_DUMP -C $CMS_DIR
   generate_user_password
   USER_SQL=$DB_IMPORT_DIR/$($TIMESTAMP_CMD).sql
@@ -149,8 +151,14 @@ function rebuild_from_scratch {
 
 function restore_single_site {
   load_config $1
-  load_dumps  
+  load_dumps
   check_backup $1
+  if [ $CMS_DUMP -ot $CMS_DIR$TIMESTAMP_EXT ]; then
+    set +x
+    echo "Backup has never been taken from the running system."
+    echo "Either run 'create-backup' first, or run with '-a' for a complete rebuild."
+    exit 1
+  fi
   confirmation_to_proceed \
     "Restoring '$1' from backup will destroy existing data in this site."
   echo -n "Restoring CMS files ... "
