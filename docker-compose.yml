@@ -13,6 +13,7 @@ services:
    nginx:
      depends_on:
        - drupal
+       - s3-proxy
      image: nginx:stable
      volumes:
        - "./nginx-conf:/etc/nginx/conf.d"
@@ -24,8 +25,16 @@ services:
        - "80:80"
      links:
        - drupal
+       - s3-proxy
      restart: always
-    
+
+   s3-proxy:
+     image: coopernurse/nginx-s3-proxy
+     volumes:
+       - "./s3-proxy.conf:/nginx.conf"
+       - "./.s3-proxy-secret.conf:/s3-secret.conf"
+     restart: always
+
    drupal:
      depends_on:
        - db

@@ -2,3 +2,4 @@
 .data
 backup
 .db-secret
+.s3-proxy-secret.conf
