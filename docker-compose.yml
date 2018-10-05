@@ -32,6 +32,7 @@ services:
      image: coopernurse/nginx-s3-proxy
      volumes:
        - "./s3-proxy.conf:/nginx.conf"
+       - "./s3-proxy-common.conf:/s3-proxy-common.conf"
        - "./.s3-proxy-secret.conf:/s3-secret.conf"
      restart: always
 
