@@ -10,16 +10,31 @@ services:
      env_file:
        - "./.db-secret"
 
+   certbot:
+     image: salemove/letsencrypt-dns
+     volumes:
+       - "le-certs:/certs"
+     restart: always
+     environment:
+       - PROVIDER=route53
+       - CERTBOT_DOMAIN=*.ostankin.net
+       - CERTBOT_ALIAS=myx.ostankin.net
+     env_file:
+       - "./.certbot-secret"
+
    nginx:
      depends_on:
        - drupal
        - s3-proxy
+       - certbot
      image: nginx:stable
      volumes:
+       - "le-certs:/certs"
        - "./nginx.conf.d:/etc/nginx/conf.d"
        - "./.data/files/kuradiauk:/usr/share/nginx/kuradiauk"
      ports:
        - "80:80"
+       - "443:443"
      links:
        - drupal
        - s3-proxy
@@ -52,3 +67,6 @@ services:
      links:
        - db:mysql
      restart: always
+
+volumes:
+  le-certs:
