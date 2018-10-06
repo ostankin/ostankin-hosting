@@ -16,11 +16,8 @@ services:
        - s3-proxy
      image: nginx:stable
      volumes:
-       - "./nginx-conf:/etc/nginx/conf.d"
-       - "./.data/files/root:/usr/share/nginx/root"
-       - "./.data/files/pshortcut:/usr/share/nginx/pshortcut"
+       - "./nginx.conf.d:/etc/nginx/conf.d"
        - "./.data/files/kuradiauk:/usr/share/nginx/kuradiauk"
-       - "./.data/files/aboutbears:/usr/share/nginx/aboutbears"
      ports:
        - "80:80"
      links:
