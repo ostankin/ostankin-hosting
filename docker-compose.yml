@@ -58,15 +58,5 @@ services:
        - db
      restart: always
 
-   modx:
-     depends_on:
-       - db
-     image: gerasim13/modx-docker
-     volumes:
-       - "./.data/cms/aqtest:/var/www/html"
-     links:
-       - db:mysql
-     restart: always
-
 volumes:
   le-certs:
