@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Download updated modules using Drupal UI,
+# then run this script to finish the update.
+
+if [ "$#" -ne 1 ]; then
+  >&2 echo "Specify Drupal location."
+  exit 1
+fi
+
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source $DIR/common-functions
+DRUPAL_NAME="$1"
+DRUPAL_DIR="$CMS_BASE_DIR/$DRUPAL_NAME"
+CACHE_DIR=$(find "$DRUPAL_DIR" -name "update-extraction-*")
+MODULES=$(ls "$CACHE_DIR")
+MODULES_DIR="$DRUPAL_DIR/sites/all/modules"
+
+for module in $MODULES; do
+  sudo rm -r "$MODULES_DIR/$module"
+  sudo cp -R "$CACHE_DIR/$module" "$MODULES_DIR/"
+  sudo chown -R root:root "$MODULES_DIR/$module"
+done
