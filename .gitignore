@@ -4,3 +4,4 @@ backup
 .db-secret
 .s3-proxy-secret.conf
 .certbot-secret
+.upgrade-artifacts

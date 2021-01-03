@@ -1,0 +1,58 @@
+#!/bin/bash
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source $DIR/common-functions
+
+if [ "$#" -ne 2 ]; then
+  >&2 echo "Specify Drupal location and the version to upgrade to."
+  exit 1
+fi
+
+get_current_drupal_version() {
+  grep -E "image: drupal:" docker-compose.yml | sed -n 's/^.*\([0-9]\.[0-9][0-9]\).*$/\1/p'
+}
+
+download_drupal_version() {
+  local archive_name="drupal-$1.tar.gz"
+  local archive_file="$WORK/$archive_name"
+  wget -P "$WORK" "https://ftp.drupal.org/files/projects/$archive_name"
+  tar xzf "$archive_file" -C "$WORK"
+  rm "$archive_file"
+  echo "${archive_file%%.tar.gz}"
+}
+
+DRUPAL_NAME=$1
+VERSION=$2
+DRUPAL="$CMS_BASE_DIR/$DRUPAL_NAME"
+WORK="$DIR/.upgrade-artifacts"
+DELETE="$WORK/files_to_delete"
+ERRORS="$WORK/errors"
+
+if [ ! -d "$WORK" ]; then
+        echo "$WORK does not exist, creating..."
+        mkdir $WORK
+fi
+
+OLD=$(download_drupal_version "$(get_current_drupal_version)" )
+NEW=$(download_drupal_version "$VERSION" )
+
+(cd "$OLD" && find . | grep -v '^.\/sites' > "$DELETE")
+
+cd "$DRUPAL" || exit 1
+>&2 echo "Saving original .htaccess and robots.txt to $WORK..."
+cp .htaccess robots.txt $WORK
+>&2 echo "Removing old core files..."
+tac $DELETE | tr '\n' '\0' | sudo xargs -0 rm 2>$ERRORS
+tac $DELETE | tr '\n' '\0' | sudo xargs -0 rmdir 2>>$ERRORS
+cat $ERRORS | grep -v 'Is a directory' | grep -v 'No such file or directory'
+rm $ERRORS
+>&2 echo "Copying new core files..."
+sudo chown -R root:root "$NEW"
+sudo cp -r "$NEW/." "$DRUPAL"
+sudo rm -r "$NEW"
+
+cd "$DIR" || exit 1
+>&2 echo "Saving diffs for .htaccess and robots.txt in $WORK..."
+diff $WORK/robots.txt $DRUPAL/robots.txt >$WORK/robots_diff.txt
+diff $WORK/.htaccess $DRUPAL/.htaccess >$WORK/htaccess_diff.txt
+>&2 echo "Done! Don't forget to re-apply your changes to .htaccess and robots.txt."
