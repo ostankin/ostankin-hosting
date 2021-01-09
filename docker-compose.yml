@@ -25,27 +25,20 @@ services:
    nginx:
      depends_on:
        - drupal
-       - s3-proxy
        - certbot
      image: nginx:stable
      volumes:
        - "le-certs:/certs"
        - "./nginx.conf.d:/etc/nginx/conf.d"
        - "./.data/files/kuradiauk:/usr/share/nginx/kuradiauk"
+       - "./.data/files/pshortcut:/usr/share/nginx/pshortcut"
+       - "./.data/files/root:/usr/share/nginx/root"
+       - "./.data/files/aboutbears:/usr/share/nginx/aboutbears"
      ports:
        - "80:80"
        - "443:443"
      links:
        - drupal
-       - s3-proxy
-     restart: always
-
-   s3-proxy:
-     image: coopernurse/nginx-s3-proxy
-     volumes:
-       - "./s3-proxy.conf:/nginx.conf"
-       - "./s3-proxy-common.conf:/s3-proxy-common.conf"
-       - "./.s3-proxy-secret.conf:/s3-secret.conf"
      restart: always
 
    drupal:
