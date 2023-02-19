@@ -1,0 +1,19 @@
+# This file must be referenced to from ssl_proxy, running
+# as a separate docker-compose project:
+# https://github.com/ostankin/docker-wildcard-certbot-dns/tree/master/docker-compose/ssl_proxy
+
+common: |
+  limit_req_zone $binary_remote_addr zone=mylimit:10m rate=1r/s;
+upstreams:
+  ostankin:
+    url: http://nginx
+    subdomain: myx
+  pshortcut:
+    url: http://nginx
+    subdomain: pshortcut
+  aboutbears:
+    url: http://nginx
+    subdomain: aboutbears
+  kuradiauk:
+    url: http://nginx
+    subdomain: kuradiauk

@@ -10,36 +10,25 @@ services:
      env_file:
        - "./.db-secret"
 
-   certbot:
-     image: salemove/letsencrypt-dns
-     volumes:
-       - "le-certs:/certs"
-     restart: always
-     environment:
-       - PROVIDER=route53
-       - CERTBOT_DOMAIN=*.ostankin.net
-       - CERTBOT_ALIAS=myx.ostankin.net
-     env_file:
-       - "./.certbot-secret"
-
    nginx:
      depends_on:
        - drupal
-       - certbot
      image: nginx:stable
      volumes:
-       - "le-certs:/certs"
        - "./nginx.conf.d:/etc/nginx/conf.d"
        - "./.data/files/kuradiauk:/usr/share/nginx/kuradiauk"
        - "./.data/files/pshortcut:/usr/share/nginx/pshortcut"
        - "./.data/files/root:/usr/share/nginx/root"
        - "./.data/files/aboutbears:/usr/share/nginx/aboutbears"
-     ports:
-       - "80:80"
-       - "443:443"
      links:
        - drupal
      restart: always
+     # This part relies ssl_proxy project, which does all the work
+     # on SSL certificates and proxies HTTPS traffic here.
+     # See ssl_proxy_config.yml for more details.
+     networks:
+       - default
+       - ssl_proxy_bridge_network
 
    drupal:
      depends_on:
@@ -51,5 +40,6 @@ services:
        - db
      restart: always
 
-volumes:
-  le-certs:
+networks:
+  ssl_proxy_bridge_network:
+    external: true
