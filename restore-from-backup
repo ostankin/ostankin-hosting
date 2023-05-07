@@ -11,12 +11,15 @@ TIMESTAMP_CMD='date +%Y%j%H%M%S%N'
 TIMESTAMP_EXT='.timestamp'
 
 OPTIND=1
-while getopts "a" opt; do
+while getopts "ay" opt; do
   case "$opt" in
   a)
     COMPLETE_RESTORE=true
     ;;
-  esac
+  y)
+    IMPLIED_YES=true
+    ;;
+esac
 done
 shift $((OPTIND-1))
 
@@ -130,8 +133,10 @@ esac
 
 function rebuild_from_scratch {
   iterate_configs check_backup
-  confirmation_to_proceed \
-    "Complete rebuild from backup will destroy all existing sites."
+  if [ -z $IMPLIED_YES ]; then
+    confirmation_to_proceed \
+      "Complete rebuild from backup will destroy all existing sites."
+  fi
   sudo docker-compose down
   sudo mkdir -p $DATA_DIR
   sudo mkdir -p $CMS_BASE_DIR
@@ -159,8 +164,10 @@ function restore_single_site {
     echo "Either run 'create-backup' first, or run with '-a' for a complete rebuild."
     exit 1
   fi
-  confirmation_to_proceed \
-    "Restoring '$1' from backup will destroy existing data in this site."
+  if [ -z $IMPLIED_YES ]; then
+    confirmation_to_proceed \
+      "Restoring '$1' from backup will destroy existing data in this site."
+  fi
   echo -n "Restoring CMS files ... "
   sudo rm -r ${CMS_DIR?"Barmin prevented"}/*
   sudo mkdir -p $CMS_DIR
