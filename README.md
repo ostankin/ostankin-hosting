@@ -8,6 +8,8 @@ Sites are routed via Nginx. Each site is configured in a separate file under `ng
 
 Both CMS and database are persistent and stored in `.data/cms` and `.data/db` directories respectively.
 
+The CMS also can rely on Postfix container responsible for sending email notifications.
+
 ## Prerequisites
 
 The setup requires Docker and Docker Compose to work (as `root`):
@@ -15,6 +17,15 @@ The setup requires Docker and Docker Compose to work (as `root`):
 apt-get install docker docker.io python-pip
 pip install docker-compose
 ```
+
+Also, you may need to configure Postfix in order to send emails, but at the very least you need to create `.env` file
+with `MAILER_PASSWORD` variable defined, e.g.:
+
+```
+MAILER_PASSWORD=12345
+```
+
+This is the password that can be used for sending outgoing emails with user `mailer` on behalf of ostankin.net.
 
 ## Configuration
 
@@ -24,6 +35,26 @@ The following elements are responsible for hosting configuration:
 * `config.d` - metadata for CMS sites;
 * `nginx.conf` - set of Nginx config files for each site;
 * `docker-compose.yml` - configuration of containers and their interdependencies.
+
+### Configuring Postfix
+
+In order to configure Postfix, make sure to:
+1. Create `dkim` directory
+2. Place there `dkim.key` -- private key that matches the public key stored in `blog._domainkey.ostankin.net` DNS record.
+
+If the private key is lost, generate a new pair using `openssl`:
+```
+# Go to dkim directory
+cd dkim
+
+# Generate a new key pair
+openssl genrsa -out dkim.key 1024
+
+# Print out the public key
+openssl rsa -pubout -in dkim.key | grep -v 'PUBLIC KEY-----' | tr -d '\n' ; echo
+```
+
+The public key needs to be copy-pasted into the DNS record after `p=`, and then you should be good to go.
 
 ## Restoring from backup
 

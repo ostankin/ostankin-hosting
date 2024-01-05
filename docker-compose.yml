@@ -33,12 +33,27 @@ services:
    drupal:
      depends_on:
        - db
+       - postfix
      image: drupal:7.51-apache
      volumes:
        - "./.data/cms/myx:/var/www/html"
      links:
        - db
+       - postfix
      restart: always
+
+   postfix:
+    image: marvambass/versatile-postfix
+    volumes:
+      - "./dkim:/etc/postfix/dkim"
+      - "/var/log/postfix:/var/log"
+    environment:
+      DKIM_SELECTOR: blog
+      POSTFIX_RAW_CONFIG_SMTPD_USE_TLS: 'no'
+    command:
+      - ostankin.net
+      - 'mailer:${MAILER_PASSWORD}'
+    restart: unless-stopped
 
 networks:
   ssl_proxy_bridge_network:

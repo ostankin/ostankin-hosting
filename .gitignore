@@ -5,3 +5,5 @@ backup
 .s3-proxy-secret.conf
 .certbot-secret
 .upgrade-artifacts
+.env
+dkim/
