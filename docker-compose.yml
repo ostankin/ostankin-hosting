@@ -13,7 +13,7 @@ services:
    nginx:
      depends_on:
        - drupal
-     image: nginx:stable
+     image: nginx:stable-alpine
      volumes:
        - "./nginx.conf.d:/etc/nginx/conf.d"
        - "./.data/files/kuradiauk:/usr/share/nginx/kuradiauk"
