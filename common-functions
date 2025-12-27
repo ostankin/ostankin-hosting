@@ -5,6 +5,7 @@ CREATE_USER_TEMPLATE=$TEMPLATES_DIR/create-user.template
 BASE_BACKUP_DIR=$DIR/backup
 CMS_BASE_DIR=$DATA_DIR/cms
 DB_SECRET=$DIR/.db-secret
+DB_CNF=$DIR/.db-cnf
 
 function iterate_configs {
   for f in $CONFIG_DIR/*; do
@@ -27,4 +28,15 @@ function load_config {
     echo "Config file $CONFIG_FILE does not exist."
     exit 1
   fi
+}
+
+function load_mysql_container {
+  MYSQL_CONTAINER=$(sudo docker ps -q -f ancestor=mysql:5.7)
+  docker cp $DB_CNF $MYSQL_CONTAINER:/.cnf
+}
+
+function invoke_mysql {
+  load_mysql_container
+  sudo docker exec -i $MYSQL_CONTAINER \
+    mysql --defaults-extra-file=/.cnf $1 2> /dev/null
 }

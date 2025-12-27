@@ -54,6 +54,7 @@ function modx_update_config {
 function generate_root_password {
   MYSQL_ROOT_PASSWORD=$(eval $PWD_GEN_CMD)
   echo "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD" > $DB_SECRET
+  echo -e '[client]\nuser = "root"\npassword = "'$MYSQL_ROOT_PASSWORD'"' > $DB_CNF
 }
 
 function generate_user_password {
@@ -93,16 +94,6 @@ function rebuild_cms_files {
   sed -i 's/#PASSWORD#/'$USER_PASSWORD'/g' $USER_SQL
   $CMS_NAME"_update_config"
   echo done
-}
-
-function load_mysql_container {
-  MYSQL_CONTAINER=$(sudo docker ps -q -f ancestor=mysql:5.7)
-}
-
-function invoke_mysql {
-  load_mysql_container
-  sudo docker exec -i $MYSQL_CONTAINER \
-    mysql -u root --password=$MYSQL_ROOT_PASSWORD $1 2> /dev/null
 }
 
 function mysql_is_up {
