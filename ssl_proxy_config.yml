@@ -17,3 +17,9 @@ upstreams:
   kuradiauk:
     url: http://nginx
     subdomain: kuradiauk
+  files_www:
+    url: http://nginx
+    subdomain: www
+  files_default:
+    url: http://nginx
+    subdomain: ''

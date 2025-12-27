@@ -7,6 +7,8 @@ services:
        - "./.data/db:/var/lib/mysql"
        - "./.db_import:/docker-entrypoint-initdb.d"
      restart: always
+     mem_limit: 1500m
+     mem_reservation: 512m
      env_file:
        - "./.db-secret"
 
@@ -23,6 +25,8 @@ services:
      links:
        - drupal
      restart: always
+     mem_limit: 32m
+     mem_reservation: 8m
      # This part relies ssl_proxy project, which does all the work
      # on SSL certificates and proxies HTTPS traffic here.
      # See ssl_proxy_config.yml for more details.
@@ -43,17 +47,19 @@ services:
      restart: always
 
    postfix:
-    image: marvambass/versatile-postfix
-    volumes:
-      - "./dkim:/etc/postfix/dkim"
-      - "/var/log/postfix:/var/log"
-    environment:
-      DKIM_SELECTOR: blog
-      POSTFIX_RAW_CONFIG_SMTPD_USE_TLS: 'no'
-    command:
-      - ostankin.net
-      - 'mailer:${MAILER_PASSWORD}'
-    restart: unless-stopped
+     image: marvambass/versatile-postfix
+     volumes:
+       - "./dkim:/etc/postfix/dkim"
+       - "/var/log/postfix:/var/log"
+     environment:
+       DKIM_SELECTOR: blog
+       POSTFIX_RAW_CONFIG_SMTPD_USE_TLS: 'no'
+     command:
+       - ostankin.net
+       - 'mailer:${MAILER_PASSWORD}'
+     restart: unless-stopped
+     mem_limit: 64m
+     mem_reservation: 16m
 
 networks:
   ssl_proxy_bridge_network:
